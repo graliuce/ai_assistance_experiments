@@ -1,0 +1,1226 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Fractions Experiment</title>
+  <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.1/jquery.min.js"></script>
+
+  <script src="https://unpkg.com/jspsych@7.3.2"></script>
+  <script src="https://unpkg.com/@jspsych/plugin-instructions@1.1.2"></script>
+  <script src="https://unpkg.com/@jspsych/plugin-survey-multi-choice@1.1.2"></script>
+  <script src="https://unpkg.com/@jspsych/plugin-survey-html-form"></script>
+  <script src="https://unpkg.com/@jspsych/plugin-survey-likert@1.1.2"></script>
+  <link href="https://unpkg.com/jspsych@7.3.2/css/jspsych.css" rel="stylesheet" />
+  <link href="../css/experiment.css" rel="stylesheet" />
+  <link href="../css/chat.css" rel="stylesheet" />
+
+  <!-- MathJax for rendering LaTeX math notation -->
+  <script>
+    window.MathJax = {
+      tex: {
+        inlineMath: [['\\(', '\\)']],
+        displayMath: [['\\[', '\\]']],
+        processEscapes: true
+      },
+      options: {
+        skipHtmlTags: ['script', 'noscript', 'style', 'textarea', 'pre']
+      }
+    };
+  </script>
+  <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js" async></script>
+
+  <script src="../js/chat.js"></script>
+
+  <style>
+    .puzzle-container { display:flex; flex-direction:column; align-items:center; gap:20px; margin:20px auto; max-width:800px; padding:20px; box-sizing:border-box; }
+    .puzzle-problem { font-size:24px; line-height:2; text-align:center; max-width:600px; padding:30px; background:#f9f9f9; border-radius:8px; border:1px solid #ddd; }
+    .answer-section { display:inline-flex; align-items:center; gap:10px; }
+    .answer-input { width:120px; height:40px; font-size:20px; text-align:center; border:2px solid #333; border-radius:4px; }
+    .answer-input:focus { outline:none; border-color:#2E86AB; background:#e8f4f8; }
+    .answer-input.correct { background:#d4f4dd; border-color:#28a745; }
+    .answer-input.incorrect { background:#ffd6d6; border-color:#dc3545; }
+    .answer-input:disabled { opacity:0.7; cursor:not-allowed; }
+    .answer-units { font-size:18px; color:#333; }
+    .feedback-area { text-align:center; margin:20px 0; font-size:16px; min-height:30px; }
+    .chat-widget,.chat-container { display:block !important; }
+
+    /* Center instruction pages vertically */
+    .jspsych-instructions-nav {
+      position: fixed !important;
+      bottom: 20px !important;
+      left: 50% !important;
+      transform: translateX(-50%) !important;
+      width: auto !important;
+      text-align: center !important;
+    }
+
+    /* Default centering for instruction/consent/survey-likert pages */
+    .jspsych-content-wrapper {
+      display: flex !important;
+      align-items: center !important;
+      justify-content: center !important;
+      min-height: 100vh !important;
+      padding: 20px !important;
+      box-sizing: border-box !important;
+    }
+
+    .jspsych-content {
+      max-width: 1000px !important;
+      margin: 0 auto !important;
+    }
+
+    /* Reduce Likert scale width */
+    .jspsych-survey-likert-opts {
+      max-width: 600px !important;
+      margin: 0 auto !important;
+    }
+
+    /* Larger font and radio buttons for Likert surveys */
+    .jspsych-survey-likert-statement {
+      font-size: 20px !important;
+      margin-bottom: 10px !important;
+    }
+
+    .jspsych-survey-likert-opts li label {
+      font-size: 14px !important;
+    }
+
+    .jspsych-survey-likert-opts li input[type="radio"] {
+      width: 18px !important;
+      height: 18px !important;
+    }
+
+    .jspsych-survey-likert-preamble {
+      font-size: 20px !important;
+    }
+
+    /* Custom likert scale with grey line matching jsPsych */
+    .custom-likert-scale {
+      max-width: 500px;
+      margin: 0 auto;
+    }
+
+    .custom-likert-opts {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+      display: flex;
+      justify-content: space-between;
+      position: relative;
+      padding-top: 20px;
+    }
+
+    .custom-likert-opts:before {
+      content: '';
+      position: absolute;
+      top: 24px;
+      left: 0;
+      right: 0;
+      background-color: #efefef;
+      height: 4px;
+      width: 100%;
+      z-index: 0;
+    }
+
+    .custom-likert-opts li {
+      display: inline-block;
+      text-align: center;
+      vertical-align: top;
+      position: relative;
+      flex: 1;
+      z-index: 1;
+    }
+
+    .custom-likert-opts li input[type="radio"] {
+      display: block;
+      margin: 0 auto 8px auto;
+      position: relative;
+      z-index: 2;
+    }
+
+    .custom-likert-opts li label {
+      display: block;
+      text-align: center;
+      font-size: 10pt;
+      line-height: 1.1em;
+    }
+
+    .custom-likert-question {
+      font-size: 18px;
+      margin: 0 0 1em 0;
+      font-weight: normal;
+    }
+
+    .answer-hint {
+      font-size: 14px;
+      color: #666;
+      margin-top: 5px;
+    }
+
+    /* Larger font for ChatGPT messages */
+    .assistant-message {
+      font-size: 18px !important;
+    }
+
+    /* Hints panel styles for control condition */
+    .hints-sidebar {
+      width: 40vw;
+      max-width: 700px;
+      min-width: 260px;
+      position: fixed;
+      right: 0;
+      top: 0;
+      z-index: 100;
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+      background: #f9f9f9;
+      border-left: 1px solid #ddd;
+      box-shadow: -2px 0 10px rgba(0,0,0,0.1);
+    }
+    .hints-sidebar.hidden {
+      display: none !important;
+    }
+    .hints-resize-handle {
+      position: absolute;
+      left: 0;
+      top: 0;
+      width: 8px;
+      height: 100%;
+      cursor: ew-resize;
+      background: transparent;
+      z-index: 101;
+    }
+    .hints-resize-handle:hover {
+      background: rgba(46, 134, 171, 0.3);
+    }
+    .hints-header {
+      background: #2E86AB;
+      color: white;
+      padding: 16px;
+      font-size: 18px;
+      font-weight: 500;
+      text-align: center;
+    }
+    .hints-content {
+      padding: 20px;
+      flex: 1;
+      overflow-y: auto;
+      font-size: 16px;
+      line-height: 1.6;
+    }
+    .hints-content h3 {
+      margin-top: 0;
+      color: #333;
+      font-size: 18px;
+    }
+    .hints-content p {
+      margin: 12px 0;
+      color: #444;
+    }
+    .hints-content .hint-box {
+      background: white;
+      border: 1px solid #ddd;
+      border-radius: 8px;
+      padding: 15px;
+      margin: 15px 0;
+    }
+    .hints-content .hint-box h4 {
+      margin: 0 0 10px 0;
+      color: #2E86AB;
+      font-size: 16px;
+    }
+
+    /* Progress bar styles */
+    .progress-container {
+      width: 100%;
+      max-width: 600px;
+      margin: 20px auto;
+      text-align: center;
+    }
+    .progress-bar-wrapper {
+      width: 600px;
+      max-width: 100%;
+      height: 20px;
+      background-color: #e0e0e0;
+      border-radius: 10px;
+      overflow: hidden;
+      margin: 0 auto 8px auto;
+    }
+    .progress-bar-fill {
+      height: 100%;
+      background-color: #4CAF50;
+      border-radius: 10px;
+      transition: width 0.3s ease;
+    }
+    .progress-text {
+      font-size: 14px;
+      color: #666;
+    }
+  </style>
+</head>
+<body>
+  <div id="jspsych_target"></div>
+
+  <!-- Hints Panel for Control Condition -->
+  <div class="hints-sidebar hidden" id="hintsSidebar">
+    <div class="hints-resize-handle" id="hintsResizeHandle"></div>
+    <div class="hints-header">
+      How to Solve Fractions
+    </div>
+    <div class="hints-content">
+      <div class="hint-box">
+        <h4>Addition & Subtraction</h4>
+        <p>To add or subtract fractions, first find a <strong>common denominator</strong>. Convert each fraction so they have the same denominator, then add or subtract the numerators.</p>
+      </div>
+      <div class="hint-box">
+        <h4>Multiplication</h4>
+        <p>Multiply the numerators together and multiply the denominators together.</p>
+      </div>
+      <div class="hint-box">
+        <h4>Division</h4>
+        <p>To divide fractions, multiply by the <strong>reciprocal</strong> (flip the second fraction).</p>
+      </div>
+    </div>
+  </div>
+</body>
+<script>
+  var allPuzzleChatLogs = {}; // Store chat logs for each puzzle by puzzle identifier
+  var currentPuzzleId = null; // Track which puzzle is currently active
+  var puzzleStartTime, puzzleCompletionTime, userSolved;
+  // New tracking variables per requirements
+  var puzzleGaveUp = false;              // whether user clicked Give Up (and had not already solved correctly)
+  var puzzleSolvedCorrectly = false;     // whether the answer is correct
+
+  // Function to log chat messages for the current puzzle
+  window.logChatMessage = function(messageObj) {
+    if (currentPuzzleId !== null) {
+      if (!allPuzzleChatLogs[currentPuzzleId]) {
+        allPuzzleChatLogs[currentPuzzleId] = [];
+      }
+      allPuzzleChatLogs[currentPuzzleId].push(messageObj);
+    }
+  };
+
+
+  var jsPsych = initJsPsych({
+    display_element: $('#jspsych_target')[0],
+    on_finish: function(){
+      var allData = jsPsych.data.get();
+      allData.values().forEach(function(trial){
+        if(trial.stimulus_type==='fractions_puzzle'){
+          // Assign the specific chat logs for this puzzle
+          var puzzleId = trial.puzzle_id;
+          trial.chat_logs = allPuzzleChatLogs[puzzleId] || [];
+        }
+      });
+      $.ajax({ type:"POST", url:"/experiment-data", data:JSON.stringify(allData), contentType:"application/json"})
+      .done(()=>{ window.location.href = "finish"; })
+      .fail(()=>{ alert("Error saving data"); window.location.href="/"; });
+    }
+  });
+
+  // Randomly assign 50% of participants to a no-assistant condition on each page load
+  const participantNoAI = Math.random() < 0.5;
+  // Attach condition to all jsPsych data
+  jsPsych.data.addProperties({ no_ai_condition: participantNoAI });
+
+  var timeline = [];
+
+  /* ---------- CONSENT ---------- */
+    var consentPage = '<div style="width:1060px;" align="left"> <p><h1>University of California, Los Angeles</h1></p>\n\n<p><h2>RESEARCH INFORMATION SHEET</h2></p>\n\n<p><h3>Fractions Problem Solving Study</h3></p>\n\n<p><b>INTRODUCTION</b></p>\n\n<p>Professor Rachit Dubey from the Department Communication at the University of California, Los Angeles are conducting a research study. You were selected as a possible participant in this study because you are 18 years of age or older, fluent in English, and are based in the US. Your participation in this research study is voluntary.</p>\n\n<p><b>WHAT SHOULD I KNOW ABOUT A RESEARCH STUDY?</b></p>\n\n<ul>\n<li>Someone will explain this research study to you.</li>\n<li>Whether or not you take part is up to you.</li>\n<li>You can choose not to take part.</li>\n<li>You can agree to take part and later change your mind.</li>\n<li>Your decision will not be held against you.</li>\n<li>You can ask all the questions you want before you decide.</li>\n</ul>\n\n<p><b>WHY IS THIS RESEARCH BEING DONE?</b></p>\n\n<p>The purpose of this study is to better understand how people solve problems. The findings may help us gain insight into human cognition and behavior.</p>\n\n<p><b>HOW LONG WILL THE RESEARCH LAST AND WHAT WILL I NEED TO DO?</b></p>\n\n<p>Participation will take a total of about 10-15 minutes.</p>\n\n<p>If you volunteer to participate in this study, the researcher will ask you to do the following:</p>\n\n<ul>\n<li>You will read some instructions and solve fractions problems on a computer.</li>\n<li>You will be asked to solve both direct fractions calculations and word problems involving fractions.</li>\n<li>You will also be asked to answer brief questions about your experience and opinions regarding the tasks.</li>\n</ul>\n\n<p><b>ARE THERE ANY RISKS IF I PARTICIPATE?</b></p>\n\n<p>There are minimal risks including potential mild frustration from difficult problems and brief cognitive fatigue from problem-solving. These risks are no greater than those encountered in recreational puzzle activity. You may withdraw from the research study at any time without penalty. For scientific reasons, this consent form does not include information about the study hypotheses and the research questions being tested. You will be fully debriefed following your participation in the research.</p>\n\n<p><b>ARE THERE ANY BENEFITS IF I PARTICIPATE?</b></p>\n\n<p>There are no direct benefits to you as a participant. The findings from this study may help researchers better understand human problem-solving and cognition, which could contribute to improved educational methods and cognitive training programs.</p>\n\n<p><b>COMPENSATION</b></p>\n\n<p>You will receive compensation as stated in the study posting. If you withdraw from the study prior to its completion, you will be compensated for the portion of the study that you completed.</p>\n\n<p><b>CONFIDENTIALITY</b></p>\n\n<p>We will not be asking for any personally identifying information, and we will handle responses as confidentially as possible. However, we cannot guarantee the confidentiality of information transmitted over the Internet. To minimize this risk, data will be encrypted on transfer and storage and will only be accessible to qualified lab personnel. This anonymized data may be shared with the scientific community.</p>\n\n<p><b>WHO CAN I CONTACT IF I HAVE QUESTIONS ABOUT THIS STUDY?</b></p>\n\n<p><b>Research Team:</b><br>\nProfessor Rachit Dubey<br>\nEmail: rdubey@ucla.edu</p>\n\n<p><b>UCLA Office of the Human Research Protection Program (OHRPP):</b><br>\nIf you have questions about your rights as a research subject, or you have concerns or suggestions and you want to talk to someone other than the researchers, you may contact the UCLA OHRPP by phone: (310) 206-2040; by email: participants@research.ucla.edu or by mail: Box 951406, Los Angeles, CA 90095-1406.</p>\n\n<p><b>CONSENT</b></p>\n\n<p>I understand the information presented above. I have been given an opportunity to ask questions and all of my questions have been answered to my satisfaction.</p>\n\n<ul>\n<li>My participation is voluntary, and I may withdraw my consent and discontinue participation at any time without penalty.</li>\n<li>I do not waive any legal rights or release the University of California, Los Angeles, its agents, or the researchers from liability for negligence.</li>\n</ul>\n\n<p>By clicking below, I hereby give my consent to participate in this research.</p>\n\n</div>';
+    var noConsentPage = '<div style="width:1000px;"> <p> Thank you!\n\nYou must consent to participate.</p></div>';
+
+    var consent_question = {
+      type: jsPsychSurveyMultiChoice,
+      preamble: consentPage,
+      url: "external_page.html",
+      questions: [
+        {
+          prompt: 'Do you understand and consent to these terms?',
+          options: [
+            ' I consent to participate',
+            ' I do not consent to participate'
+          ],
+          required: true
+        }
+      ],
+      on_finish: function (data) {
+        var responses = JSON.parse(JSON.stringify(data.response));
+        if (responses.Q0.includes('not')) {
+          jsPsych.endExperiment(noConsentPage);
+        }
+      }
+    };
+
+    timeline.push(consent_question)
+
+  /* ---------- PUZZLE DATA ---------- */
+
+  /* ===== PRE-TEST PUZZLES (2 practice problems) ===== */
+  var pretestPuzzles = [
+    /* Pre-test 1: Simple fraction addition */
+    {
+      id: "pretest_1_add",
+      problem: "Calculate: \\(\\displaystyle\\frac{3}{5} + \\frac{1}{4}\\)",
+      units: "(enter as fraction)",
+      answer: 0.85,
+      alternateAnswers: ["17/20"],
+      solutionHint: "Common denominator is 20: \\(\\displaystyle\\frac{12}{20} + \\frac{5}{20} = \\frac{17}{20}\\)",
+      type: "pretest"
+    },
+    /* Pre-test 2: Simple fraction multiplication */
+    {
+      id: "pretest_2_mult",
+      problem: "Calculate: \\(\\displaystyle\\frac{2}{3} × \\frac{3}{5}\\)",
+      units: "(enter as fraction)",
+      answer: 0.4,
+      alternateAnswers: ["2/5", "6/15"],
+      solutionHint: "Multiply numerators and denominators: \\(\\displaystyle\\frac{2×3}{3×5} = \\frac{6}{15} = \\frac{2}{5}\\)",
+      type: "pretest"
+    },
+    /* Pre-test 3: Simple fraction division */
+    {
+      id: "pretest_3_div",
+      problem: "Calculate: \\(\\displaystyle\\frac{3}{4} ÷ \\frac{2}{3}\\)",
+      units: "(enter as fraction)",
+      answer: 1.125,
+      alternateAnswers: ["9/8", "1 1/8"],
+      solutionHint: "Multiply by the reciprocal: \\(\\displaystyle\\frac{3}{4} × \\frac{3}{2} = \\frac{9}{8} = 1\\frac{1}{8}\\)",
+      type: "pretest"
+    }
+  ];
+
+  var puzzles = [
+    /* ===== BLOCK 1: EASY PUZZLES (3 problems: 1 division, 1 multiplication, 1 subtraction) ===== */
+
+    /* Problem 1: Division */
+    {
+      id: "block1_1_div",
+      problem: "Calculate: \\(\\displaystyle\\frac{3}{5} ÷ \\frac{2}{7}\\)",
+      units: "(enter as fraction)",
+      answer: 2.1,
+      alternateAnswers: ["21/10", "2 1/10"],
+      solutionHint: "Multiply by the reciprocal: \\(\\displaystyle\\frac{3}{5} × \\frac{7}{2} = \\frac{21}{10} = 2\\frac{1}{10}\\)",
+      type: "initial",
+      block: 1
+    },
+
+    /* Problem 2: Multiplication */
+    {
+      id: "block1_2_mult",
+      problem: "Calculate: \\(\\displaystyle\\frac{4}{7} × \\frac{3}{5}\\)",
+      units: "(enter as fraction)",
+      answer: 0.3429,
+      alternateAnswers: ["12/35"],
+      solutionHint: "Multiply numerators and denominators: \\(\\displaystyle\\frac{4×3}{7×5} = \\frac{12}{35}\\)",
+      type: "initial",
+      block: 1
+    },
+
+    /* Problem 3: Subtraction */
+    {
+      id: "block1_3_sub",
+      problem: "Calculate: \\(\\displaystyle\\frac{3}{4} - \\frac{2}{5}\\)",
+      units: "(enter as fraction)",
+      answer: 0.35,
+      alternateAnswers: ["7/20"],
+      solutionHint: "Common denominator is 20: \\(\\displaystyle\\frac{15}{20} - \\frac{8}{20} = \\frac{7}{20}\\)",
+      type: "initial",
+      block: 1
+    },
+
+    /* ===== BLOCK 2: MEDIUM PUZZLES (4 problems) ===== */
+
+    /* Problem 4: Complex fraction operation */
+    {
+      id: "block2_1_complex_op",
+      problem: "Calculate: \\(\\displaystyle\\left(\\frac{3}{4} + \\frac{2}{5}\\right) × \\frac{2}{3}\\)",
+      units: "(enter as fraction)",
+      answer: 0.7667,
+      alternateAnswers: ["23/30"],
+      solutionHint: "First add: \\(\\displaystyle\\frac{15}{20} + \\frac{8}{20} = \\frac{23}{20}\\), then multiply: \\(\\displaystyle\\frac{23}{20} × \\frac{2}{3} = \\frac{46}{60} = \\frac{23}{30}\\)",
+      type: "initial",
+      block: 2
+    },
+
+    /* Problem 5: Complex operation with division */
+    {
+      id: "block2_2_complex_div",
+      problem: "Calculate: \\(\\displaystyle\\left(\\frac{5}{6} - \\frac{1}{3}\\right) ÷ \\frac{2}{5}\\)",
+      units: "(enter as fraction)",
+      answer: 1.25,
+      alternateAnswers: ["5/4", "1 1/4"],
+      solutionHint: "First subtract: \\(\\displaystyle\\frac{5}{6} - \\frac{2}{6} = \\frac{3}{6} = \\frac{1}{2}\\), then divide: \\(\\displaystyle\\frac{1}{2} ÷ \\frac{2}{5} = \\frac{1}{2} × \\frac{5}{2} = \\frac{5}{4}\\)",
+      type: "initial",
+      block: 2
+    },
+
+    /* Problem 6: Complex fraction addition and multiplication */
+    {
+      id: "block2_3_complex_add_mult",
+      problem: "Calculate: \\(\\displaystyle\\left(\\frac{3}{4} + \\frac{2}{5}\\right) × \\frac{4}{7}\\)",
+      units: "(enter as fraction)",
+      answer: 0.6571,
+      alternateAnswers: ["23/35", "92/140"],
+      solutionHint: "First add: \\(\\displaystyle\\frac{15}{20} + \\frac{8}{20} = \\frac{23}{20}\\), then multiply: \\(\\displaystyle\\frac{23}{20} × \\frac{4}{7} = \\frac{92}{140} = \\frac{23}{35}\\)",
+      type: "initial",
+      block: 2
+    },
+
+    /* Problem 7: Subtraction and multiplication */
+    {
+      id: "block2_4_sub_mult",
+      problem: "Calculate: \\(\\displaystyle\\left(\\frac{7}{8} - \\frac{1}{2}\\right) × \\frac{5}{6}\\)",
+      units: "(enter as fraction)",
+      answer: 0.3125,
+      alternateAnswers: ["5/16", "15/48"],
+      solutionHint: "First subtract: \\(\\displaystyle\\frac{7}{8} - \\frac{4}{8} = \\frac{3}{8}\\), then multiply: \\(\\displaystyle\\frac{3}{8} × \\frac{5}{6} = \\frac{15}{48} = \\frac{5}{16}\\)",
+      type: "initial",
+      block: 2
+    },
+
+    /* ===== BLOCK 3: HARD PUZZLES (4 problems) ===== */
+
+    /* Problem 9: Nested operations */
+    {
+      id: "block3_1_nested",
+      problem: "Calculate: \\(\\displaystyle\\left(\\left(\\frac{1}{2} + \\frac{1}{3}\\right) × \\frac{3}{4}\\right) ÷ \\frac{2}{5}\\)",
+      units: "(enter as fraction)",
+      answer: 1.5625,
+      alternateAnswers: ["25/16", "1 9/16"],
+      solutionHint: "First add: \\(\\displaystyle\\frac{1}{2} + \\frac{1}{3} = \\frac{5}{6}\\), then multiply: \\(\\displaystyle\\frac{5}{6} × \\frac{3}{4} = \\frac{15}{24} = \\frac{5}{8}\\), finally divide: \\(\\displaystyle\\frac{5}{8} ÷ \\frac{2}{5} = \\frac{5}{8} × \\frac{5}{2} = \\frac{25}{16}\\)",
+      type: "initial",
+      block: 3
+    },
+
+    /* Problem 10: Complex nested operation */
+    {
+      id: "block3_2_complex_nested",
+      problem: "Calculate: \\(\\displaystyle\\left(\\left(\\frac{2}{3} + \\frac{1}{4}\\right) × \\frac{6}{7}\\right) ÷ \\frac{3}{5}\\)",
+      units: "(enter as fraction)",
+      answer: 1.3095,
+      alternateAnswers: ["55/42", "1 13/42"],
+      solutionHint: "First add: \\(\\displaystyle\\frac{2}{3} + \\frac{1}{4} = \\frac{8}{12} + \\frac{3}{12} = \\frac{11}{12}\\), then multiply: \\(\\displaystyle\\frac{11}{12} × \\frac{6}{7} = \\frac{66}{84} = \\frac{11}{14}\\), finally divide: \\(\\displaystyle\\frac{11}{14} ÷ \\frac{3}{5} = \\frac{11}{14} × \\frac{5}{3} = \\frac{55}{42}\\)",
+      type: "initial",
+      block: 3
+    },
+
+    /* Problem 11: Mixed operations */
+    {
+      id: "block3_3_mixed_ops",
+      problem: "Calculate: \\(\\displaystyle\\left(\\frac{1}{2} × \\frac{3}{5}\\right) + \\left(\\frac{2}{3} × \\frac{3}{4}\\right)\\)",
+      units: "(enter as fraction)",
+      answer: 0.8,
+      alternateAnswers: ["4/5", "8/10"],
+      solutionHint: "First: \\(\\displaystyle\\frac{1}{2} × \\frac{3}{5} = \\frac{3}{10}\\). Second: \\(\\displaystyle\\frac{2}{3} × \\frac{3}{4} = \\frac{6}{12} = \\frac{1}{2}\\). Then add: \\(\\displaystyle\\frac{3}{10} + \\frac{1}{2} = \\frac{3}{10} + \\frac{5}{10} = \\frac{8}{10} = \\frac{4}{5}\\)",
+      type: "initial",
+      block: 3
+    },
+
+    /* Problem 12: Complex multi-step */
+    {
+      id: "block3_4_complex_multi",
+      problem: "Calculate: \\(\\displaystyle\\left(\\frac{5}{6} - \\frac{1}{4}\\right) × \\left(\\frac{3}{5} + \\frac{1}{10}\\right)\\)",
+      units: "(enter as fraction)",
+      answer: 0.4083,
+      alternateAnswers: ["49/120", "7/12 × 7/10"],
+      solutionHint: "First: \\(\\displaystyle\\frac{5}{6} - \\frac{1}{4} = \\frac{10}{12} - \\frac{3}{12} = \\frac{7}{12}\\). Second: \\(\\displaystyle\\frac{3}{5} + \\frac{1}{10} = \\frac{6}{10} + \\frac{1}{10} = \\frac{7}{10}\\). Then multiply: \\(\\displaystyle\\frac{7}{12} × \\frac{7}{10} = \\frac{49}{120}\\)",
+      type: "initial",
+      block: 3
+    },
+
+    /* ===== FINAL PUZZLES (3 problems without AI) ===== */
+
+    /* Final Problem 1: Complex fraction operation */
+    {
+      id: "final_1_complex_op",
+      problem: "Calculate: \\(\\displaystyle\\left(\\frac{2}{3} + \\frac{1}{4}\\right) × \\frac{3}{5}\\)",
+      units: "(enter as fraction)",
+      answer: 0.55,
+      alternateAnswers: ["11/20", "33/60"],
+      solutionHint: "First add: \\(\\displaystyle\\frac{8}{12} + \\frac{3}{12} = \\frac{11}{12}\\), then multiply: \\(\\displaystyle\\frac{11}{12} × \\frac{3}{5} = \\frac{33}{60} = \\frac{11}{20}\\)",
+      type: "final"
+    },
+
+    /* Final Problem 2: Complex multi-operation */
+    {
+      id: "final_2_complex_multi",
+      problem: "Calculate: \\(\\displaystyle\\left(\\frac{3}{4} - \\frac{1}{2}\\right) × \\left(\\frac{2}{3} + \\frac{1}{4}\\right)\\)",
+      units: "(enter as fraction)",
+      answer: 0.2292,
+      alternateAnswers: ["11/48"],
+      solutionHint: "First: \\(\\displaystyle\\frac{3}{4} - \\frac{1}{2} = \\frac{3}{4} - \\frac{2}{4} = \\frac{1}{4}\\). Second: \\(\\displaystyle\\frac{2}{3} + \\frac{1}{4} = \\frac{8}{12} + \\frac{3}{12} = \\frac{11}{12}\\). Then multiply: \\(\\displaystyle\\frac{1}{4} × \\frac{11}{12} = \\frac{11}{48}\\)",
+      type: "final"
+    },
+
+    /* Final Problem 3: Fraction division */
+    {
+      id: "final_3_div",
+      problem: "Calculate: \\(\\displaystyle\\frac{5}{6} ÷ \\frac{3}{4}\\)",
+      units: "(enter as fraction)",
+      answer: 1.1111,
+      alternateAnswers: ["10/9", "1 1/9"],
+      solutionHint: "Multiply by the reciprocal: \\(\\displaystyle\\frac{5}{6} × \\frac{4}{3} = \\frac{20}{18} = \\frac{10}{9} = 1\\frac{1}{9}\\)",
+      type: "final"
+    }
+  ];
+
+  /* ---------- HELPER FUNCTIONS ---------- */
+  var currentPuzzle = null;
+
+  // Expose current puzzle context for chat assistant
+  window.getPuzzleChatContext = function(){
+    try {
+      if (!currentPuzzle) return null;
+      return {
+        id: currentPuzzle.id || null,
+        problem: currentPuzzle.problem || null,
+        units: currentPuzzle.units || null
+      };
+    } catch (e) {
+      return null;
+    }
+  };
+
+  // Alias for compatibility with chat.js which expects getCrosswordChatContext
+  window.getCrosswordChatContext = function(){
+    return window.getPuzzleChatContext();
+  };
+
+  // Override chat widget greeting message for fractions problems
+  document.addEventListener('DOMContentLoaded', function(){
+    // Wait for chat widget to initialize then update greeting
+    setTimeout(function(){
+      if(window.chatWidget){
+        // Override the clear function to use fractions problem greeting
+        const originalClear = window.chatWidget.clear.bind(window.chatWidget);
+        window.chatWidget.clear = function(){
+          this.conversationHistory = [];
+          this.isLoading = false;
+          const messagesContainer = document.getElementById('chatMessages');
+          const input = document.getElementById('chatInput');
+          const send = document.getElementById('chatSend');
+          if (messagesContainer) {
+            messagesContainer.innerHTML = '';
+            const greeting = document.createElement('div');
+            greeting.className = 'message assistant-message';
+            greeting.textContent = "Hi! I'm here to help you solve the problem. I can already see the problem you need to solve. Feel free to ask anything!";
+            messagesContainer.appendChild(greeting);
+            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+          }
+          if (input) input.value = '';
+          if (send) send.disabled = false;
+          this.removeTypingIndicator();
+        };
+        // Update the initial greeting if chat is visible
+        const messagesContainer = document.getElementById('chatMessages');
+        if(messagesContainer && messagesContainer.children.length > 0){
+          const firstMessage = messagesContainer.children[0];
+          if(firstMessage && firstMessage.classList.contains('assistant-message')){
+            firstMessage.textContent = "Hi! I'm here to help you solve the problem. I can already see the problem you need to solve. Feel free to ask anything!";
+          }
+        }
+      }
+    }, 100);
+  });
+
+  function buildPuzzleHTML(p, currentIndex, total){
+    const currentProblem = currentIndex + 1; // 1-indexed for display
+    const progressPercent = (currentProblem / total) * 100;
+    return `<div class="puzzle-container">
+      <h2 style="text-align:center; margin-top:6px; margin-bottom:6px;">Fractions Problem</h2>
+      <div class="puzzle-problem">${p.problem}</div>
+      <div style="text-align:center; margin-top:20px;">
+        <div class="answer-section">
+          <input type="text" id="answer-input" class="answer-input" placeholder="?" autocomplete="off">
+          <span class="answer-units">${p.units}</span>
+        </div>
+      </div>
+      <div class="feedback-area"><div id="feedback"></div></div>
+      <div style="text-align:center; margin-top:8px;">
+        <button id="give-up-button" class="jspsych-btn" type="button">Skip</button>
+      </div>
+      <div class="progress-container">
+        <div class="progress-bar-wrapper">
+          <div class="progress-bar-fill" style="width: ${progressPercent}%;"></div>
+        </div>
+        <div class="progress-text">Problem ${currentProblem}/${total}</div>
+      </div>
+    </div>`;
+  }
+
+  function hideNativeContinue(){
+    // Hide both button and input submit types added by jsPsych
+    document.querySelectorAll('button[type="submit"], input[type="submit"]').forEach(el=>{ el.style.display='none'; });
+  }
+
+  function proceedToNextTrial(){
+    // Submit the jsPsych form robustly, even if a previous screen disabled the submit
+    const form = document.querySelector('form');
+    if (form) {
+      const submitter = form.querySelector('button[type="submit"], input[type="submit"]');
+      if (submitter) {
+        // Ensure not disabled by earlier validation logic
+        submitter.disabled = false;
+      }
+      if (typeof form.requestSubmit === 'function') {
+        form.requestSubmit();
+        return;
+      }
+    }
+    // Fallback: click the hidden submit directly
+    const submit = document.querySelector('button[type="submit"], input[type="submit"]');
+    if (submit) { submit.disabled = false; submit.click(); }
+  }
+
+  function convertGiveUpToContinue(){
+    const oldBtn = document.getElementById('give-up-button') || document.getElementById('submit-button');
+    if(!oldBtn) return;
+    const newBtn = oldBtn.cloneNode(true);
+    newBtn.id = 'continue-button';
+    newBtn.textContent = 'Continue';
+    newBtn.disabled = false;
+    // Remove any previous listeners by replacing node and attach proceed handler
+    oldBtn.parentNode.replaceChild(newBtn, oldBtn);
+    newBtn.addEventListener('click', ()=>{ proceedToNextTrial(); });
+  }
+
+  function convertGiveUpToSubmit(){
+    const oldBtn = document.getElementById('give-up-button');
+    if(!oldBtn) return;
+    const newBtn = oldBtn.cloneNode(true);
+    newBtn.id = 'submit-button';
+    newBtn.textContent = 'Submit';
+    newBtn.disabled = false;
+    // Remove any previous listeners by replacing node and attach submit handler
+    oldBtn.parentNode.replaceChild(newBtn, oldBtn);
+    newBtn.addEventListener('click', ()=>{ submitPuzzle(currentPuzzle); });
+  }
+
+  // Functions to show/hide hints panel for control condition
+  var hintsResizeInitialized = false;
+
+  function updateHintsLayoutMargin(widthPx) {
+    if (window.innerWidth <= 768) {
+      document.body.style.marginRight = '';
+      return;
+    }
+    const defaultWidth = Math.round(window.innerWidth * 0.4);
+    document.body.style.marginRight = (widthPx || defaultWidth) + 'px';
+  }
+
+  function initHintsResize() {
+    if (hintsResizeInitialized) return;
+    hintsResizeInitialized = true;
+
+    const sidebar = document.getElementById('hintsSidebar');
+    const handle = document.getElementById('hintsResizeHandle');
+    if (!sidebar || !handle) return;
+
+    let isResizing = false;
+    let startX = 0;
+    let startWidth = 0;
+
+    const onMouseMove = (e) => {
+      if (!isResizing || !sidebar) return;
+      const dx = startX - e.clientX;
+      let newWidth = startWidth + dx;
+      const minWidth = 260;
+      const maxWidth = 700;
+      if (newWidth < minWidth) newWidth = minWidth;
+      if (newWidth > maxWidth) newWidth = maxWidth;
+      sidebar.style.width = newWidth + 'px';
+      updateHintsLayoutMargin(newWidth);
+    };
+
+    const onMouseUp = () => {
+      if (!isResizing) return;
+      isResizing = false;
+      document.removeEventListener('mousemove', onMouseMove);
+      document.removeEventListener('mouseup', onMouseUp);
+      const currentWidth = sidebar ? parseInt(getComputedStyle(sidebar).width, 10) : null;
+      if (currentWidth) {
+        try { localStorage.setItem('hintsSidebarWidth', String(currentWidth)); } catch (_) {}
+      }
+    };
+
+    handle.addEventListener('mousedown', (e) => {
+      if (!sidebar) return;
+      isResizing = true;
+      startX = e.clientX;
+      startWidth = parseInt(getComputedStyle(sidebar).width, 10);
+      document.addEventListener('mousemove', onMouseMove);
+      document.addEventListener('mouseup', onMouseUp);
+      e.preventDefault();
+    });
+
+    // Handle window resize
+    window.addEventListener('resize', () => {
+      if (!sidebar.classList.contains('hidden')) {
+        const width = parseInt(getComputedStyle(sidebar).width, 10);
+        updateHintsLayoutMargin(width);
+      }
+    });
+  }
+
+  function showHintsPanel() {
+    const hintsSidebar = document.getElementById('hintsSidebar');
+    if (hintsSidebar) {
+      // Restore saved width if available
+      const savedWidth = parseInt(localStorage.getItem('hintsSidebarWidth'), 10);
+      if (!isNaN(savedWidth) && savedWidth > 0) {
+        hintsSidebar.style.width = savedWidth + 'px';
+      }
+      hintsSidebar.classList.remove('hidden');
+      document.body.classList.add('split-screen-layout');
+      // Set margin to match hints panel width
+      const width = parseInt(getComputedStyle(hintsSidebar).width, 10) || 300;
+      updateHintsLayoutMargin(width);
+      // Initialize resize handler
+      initHintsResize();
+      // Render MathJax in hints panel
+      if (window.MathJax && window.MathJax.typesetPromise) {
+        window.MathJax.typesetPromise([hintsSidebar]).catch((err) => console.log('MathJax typeset error:', err));
+      }
+    }
+  }
+
+  function hideHintsPanel() {
+    const hintsSidebar = document.getElementById('hintsSidebar');
+    if (hintsSidebar) {
+      hintsSidebar.classList.add('hidden');
+    }
+    // Only remove split-screen layout if chat is also hidden
+    if (!window.chatWidget || document.getElementById('chatSidebar')?.classList.contains('hidden')) {
+      document.body.classList.remove('split-screen-layout');
+      document.body.style.marginRight = '';
+    }
+  }
+
+  function setupPuzzle(p, showSidebar){
+    puzzleStartTime = Date.now();
+    userSolved = false;
+    puzzleGaveUp = false;
+    puzzleSolvedCorrectly = false;
+    puzzleCompletionTime = null;
+    currentPuzzle = p;
+
+    // Set current puzzle ID for chat logging
+    currentPuzzleId = p.id;
+
+    // Typeset MathJax content
+    if (window.MathJax && window.MathJax.typesetPromise) {
+      window.MathJax.typesetPromise().catch((err) => console.log('MathJax typeset error:', err));
+    }
+
+    // Conditionally show/hide sidebar (chat for AI condition, hints for control condition)
+    setTimeout(()=>{
+      if (participantNoAI) {
+        // Control condition: show hints panel for main problems, hide for pretest/final
+        if(window.chatWidget) { window.chatWidget.hideChat(); }
+        if (showSidebar) {
+          showHintsPanel();
+        } else {
+          hideHintsPanel();
+        }
+      } else {
+        // AI condition: show chat for main problems, hide for pretest/final
+        hideHintsPanel();
+        if(window.chatWidget) {
+          if (showSidebar) { window.chatWidget.showChat(); }
+          else { window.chatWidget.hideChat(); }
+        }
+      }
+    },100);
+
+    // Hide Continue/submit until Give Up or correct answer
+    hideNativeContinue();
+    setTimeout(hideNativeContinue, 0);
+
+    // Answer input events
+    const answerInput = document.getElementById('answer-input');
+    if(answerInput){
+      answerInput.addEventListener('input', (e) => {
+        answerInput.classList.remove('correct','incorrect');
+        // Check if answer is filled to enable submit button
+        if(answerInput.value.trim() !== ''){
+          // Convert Give Up to Submit if not already done
+          if(!document.getElementById('submit-button')){
+            convertGiveUpToSubmit();
+          }
+        }
+      });
+
+      answerInput.addEventListener('keydown', (e) => {
+        if(e.key === 'Enter') {
+          e.preventDefault();
+          if(answerInput.value.trim() !== ''){
+            submitPuzzle(currentPuzzle);
+          }
+        }
+      });
+    }
+
+    // Give Up button handler
+    let giveUpBtn = document.getElementById('give-up-button');
+    if(giveUpBtn){
+      giveUpBtn.addEventListener('click', ()=>{ onGiveUp(p); });
+    }
+  }
+
+  function parseFraction(str) {
+    // Remove whitespace
+    str = str.trim();
+
+    // Check for mixed number format like "2 1/2" or "2 3/4"
+    const mixedMatch = str.match(/^(-?\d+)\s+(\d+)\/(\d+)$/);
+    if (mixedMatch) {
+      const whole = parseInt(mixedMatch[1]);
+      const num = parseInt(mixedMatch[2]);
+      const denom = parseInt(mixedMatch[3]);
+      if (denom === 0) return NaN;
+      const sign = whole < 0 ? -1 : 1;
+      return sign * (Math.abs(whole) + num / denom);
+    }
+
+    // Check for simple fraction format like "3/4"
+    const fractionMatch = str.match(/^(-?\d+)\/(\d+)$/);
+    if (fractionMatch) {
+      const num = parseInt(fractionMatch[1]);
+      const denom = parseInt(fractionMatch[2]);
+      if (denom === 0) return NaN;
+      return num / denom;
+    }
+
+    // Check for whole number (integer)
+    const wholeMatch = str.match(/^(-?\d+)$/);
+    if (wholeMatch) {
+      return parseInt(wholeMatch[1]);
+    }
+
+    // Do not accept decimals - return NaN for non-fraction input
+    return NaN;
+  }
+
+  function isFractionFormat(str) {
+    // Check if input is in a valid fraction format (fraction, mixed number, or whole number)
+    str = str.trim();
+    const mixedMatch = str.match(/^(-?\d+)\s+(\d+)\/(\d+)$/);
+    const fractionMatch = str.match(/^(-?\d+)\/(\d+)$/);
+    const wholeMatch = str.match(/^(-?\d+)$/);
+    return mixedMatch !== null || fractionMatch !== null || wholeMatch !== null;
+  }
+
+  function checkAnswer(userAnswer, correctAnswer, alternateAnswers){
+    // First check alternate answers (exact string matches)
+    if (alternateAnswers && alternateAnswers.length > 0) {
+      const normalizedUser = userAnswer.trim().toLowerCase();
+      for (let alt of alternateAnswers) {
+        if (normalizedUser === alt.toLowerCase()) {
+          return true;
+        }
+      }
+    }
+
+    // Validate fraction format - reject decimals
+    if (!isFractionFormat(userAnswer)) {
+      return false;
+    }
+
+    // Parse user answer
+    const parsed = parseFraction(userAnswer);
+    if(isNaN(parsed)) return false;
+
+    // Compare with tolerance for floating point
+    return Math.abs(parsed - correctAnswer) < 0.01;
+  }
+
+  function formatCorrectAnswer(p) {
+    // Show the most readable form of the answer
+    if (p.alternateAnswers && p.alternateAnswers.length > 0) {
+      // Prefer fraction form if available
+      return p.alternateAnswers[0];
+    }
+    return p.answer;
+  }
+
+  function submitPuzzle(p){
+    const answerInput = document.getElementById('answer-input');
+    const userAnswer = answerInput.value.trim();
+
+    const isCorrect = checkAnswer(userAnswer, p.answer, p.alternateAnswers);
+    puzzleSolvedCorrectly = isCorrect;
+    userSolved = isCorrect;
+    if(!puzzleCompletionTime){ puzzleCompletionTime = Date.now() - puzzleStartTime; }
+
+    if(isCorrect){
+      answerInput.classList.add('correct');
+      document.getElementById('feedback').innerHTML='<span style="color:green;font-weight:bold;">Correct!</span>';
+    } else {
+      answerInput.classList.add('incorrect');
+      let feedbackHTML = '';
+      if (p.solutionHint) {
+        feedbackHTML += '<br><span style="color:#666;font-size:14px;">Solution: ' + p.solutionHint + '</span>';
+      };
+      document.getElementById('feedback').innerHTML = feedbackHTML;
+      // Typeset MathJax in feedback
+      if (window.MathJax && window.MathJax.typesetPromise) {
+        window.MathJax.typesetPromise([document.getElementById('feedback')]).catch((err) => console.log('MathJax typeset error:', err));
+      }
+    }
+    // Disable answer input to prevent editing after submission
+    answerInput.disabled = true;
+    // Turn Submit button into Continue
+    convertGiveUpToContinue();
+  }
+
+  function onGiveUp(p){
+    const answerInput = document.getElementById('answer-input');
+    const userAnswer = answerInput.value.trim();
+    const isPretest = p.type === 'pretest';
+
+    // If user hasn't entered anything
+    if (userAnswer === '') {
+      puzzleSolvedCorrectly = false;
+      userSolved = false;
+      if(!puzzleCompletionTime){ puzzleCompletionTime = Date.now() - puzzleStartTime; }
+      puzzleGaveUp = true;
+
+      // For pretest: show solution and require Continue button
+      // For main experiment: proceed directly to next question
+      if (isPretest) {
+        let feedbackHTML = '<span style="color:#666;font-size:14px;">Solution: ' + p.solutionHint + '</span>';
+        document.getElementById('feedback').innerHTML = feedbackHTML;
+        // Typeset MathJax in feedback
+        if (window.MathJax && window.MathJax.typesetPromise) {
+          window.MathJax.typesetPromise([document.getElementById('feedback')]).catch((err) => console.log('MathJax typeset error:', err));
+        }
+        // Disable answer input to prevent editing after giving up
+        answerInput.disabled = true;
+        // Turn Skip button into Continue
+        convertGiveUpToContinue();
+      } else {
+        // Proceed directly to next question without showing answer
+        proceedToNextTrial();
+      }
+      return;
+    }
+
+    const isCorrect = checkAnswer(userAnswer, p.answer, p.alternateAnswers);
+    puzzleSolvedCorrectly = isCorrect;
+    userSolved = isCorrect;
+    if(!puzzleCompletionTime){ puzzleCompletionTime = Date.now() - puzzleStartTime; }
+    // Mark gave up only if not solved correctly
+    puzzleGaveUp = !isCorrect;
+
+    if(isCorrect){
+      answerInput.classList.add('correct');
+      document.getElementById('feedback').innerHTML='<span style="color:green;font-weight:bold;">Correct!</span>';
+    } else {
+      answerInput.classList.add('incorrect');
+      let feedbackHTML = '';
+      if (p.solutionHint) {
+        feedbackHTML += '<br><span style="color:#666;font-size:14px;">Solution: ' + p.solutionHint + '</span>';
+      };
+      document.getElementById('feedback').innerHTML = feedbackHTML;
+      // Typeset MathJax in feedback
+      if (window.MathJax && window.MathJax.typesetPromise) {
+        window.MathJax.typesetPromise([document.getElementById('feedback')]).catch((err) => console.log('MathJax typeset error:', err));
+      }
+    }
+    // Disable answer input to prevent editing after giving up
+    answerInput.disabled = true;
+    // Turn Give Up button into Continue
+    convertGiveUpToContinue();
+  }
+
+  function finalizePuzzleData(data, p){
+    data.user_solved = userSolved;
+    data.completion_time_ms = puzzleCompletionTime || (Date.now() - puzzleStartTime);
+    data.user_gave_up = puzzleGaveUp;
+    data.user_solved_correctly = puzzleSolvedCorrectly;
+    // Get user's answer
+    const answerInput = document.getElementById('answer-input');
+    data.user_answer = answerInput ? answerInput.value.trim() : '';
+    data.correct_answer = p.answer;
+    data.alternate_answers = p.alternateAnswers || [];
+    // Get chat logs specific to this puzzle
+    data.chat_logs = allPuzzleChatLogs[p.id] || [];
+  }
+
+  /* ---------- GENERATE PUZZLE TRIALS ---------- */
+  // Separate puzzles into groups by type and block
+  const initialPuzzlesPool = puzzles.filter(p => p.type === 'initial');
+  const finalPuzzlesPool = puzzles.filter(p => p.type === 'final');
+
+  // Helper function to shuffle an array (Fisher-Yates)
+  function shuffleArray(array) {
+    const shuffled = array.slice();
+    for (let i = shuffled.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+    }
+    return shuffled;
+  }
+
+  // Group initial puzzles by block and shuffle within each block
+  const block1 = shuffleArray(initialPuzzlesPool.filter(p => p.block === 1));
+  const block2 = shuffleArray(initialPuzzlesPool.filter(p => p.block === 2));
+  const block3 = shuffleArray(initialPuzzlesPool.filter(p => p.block === 3));
+
+  // Combine blocks in order (block order preserved, questions randomized within)
+  const mainPuzzles = [...block1, ...block2, ...block3];
+
+  // Final puzzles in fixed order (no randomization)
+  const finalPuzzles = finalPuzzlesPool.slice();
+
+  const totalMainPuzzles = mainPuzzles.length + finalPuzzles.length;
+  const totalPretestPuzzles = pretestPuzzles.length;
+
+  /* ---------- FIRST INSTRUCTION SCREEN (with practice round message) ---------- */
+  timeline.push({
+    type: jsPsychInstructions,
+    pages:[
+      `<div style="width:1000px; text-align:left;"><h2>Learning Study</h2>
+        <p>Welcome! Thank you for participating in this study about how different learning interventions can improve learning outcomes.</p>
+        <p>In this study, you will be solving fractions problems. These include both direct calculations and word problems involving fractions.</p>
+        <p>Enter answers as fractions (e.g., 3/4) or mixed numbers (e.g., 2 1/2).</p>
+        <p><b>Let's do a practice round so that you can get familiar with the interface.</b></p>
+        <p>Please press next to continue.</p>
+      </div>`
+    ],
+    show_clickable_nav:true
+  });
+
+  /* ---------- PRE-TEST PUZZLES (practice round, no chat/hints) ---------- */
+  pretestPuzzles.forEach((p, index)=>{
+    timeline.push({
+      type: jsPsychSurveyHtmlForm,
+      html: ()=>buildPuzzleHTML(p, index, totalPretestPuzzles),
+      button_label:'Continue',
+      data:{ stimulus_type:'fractions_puzzle', puzzle_id:p.id, puzzle_type:p.type, puzzle_index: index + 1, is_pretest: true },
+      on_load: ()=>setupPuzzle(p, false), // No chat for pretest
+      on_finish: d=>finalizePuzzleData(d,p)
+    });
+  });
+
+  /* ---------- CONDITION-SPECIFIC INSTRUCTION SCREEN ---------- */
+  if (participantNoAI) {
+    timeline.push({
+      type: jsPsychInstructions,
+      pages:[
+        `<div style="width:1000px; text-align:left;">
+          <p><b>You have been randomly assigned to the self-learning condition.</b> In this condition, we want you to work through the fraction problems on your own. You will have access to a reference panel with tips on how to solve fractions. We highly encourage you to use paper and pen, and take your time to work through the solutions.</p>
+          <p>For some problems, the reference panel will not be available.</p>
+          <p>Please don't use AI tools, Calculator, or Google to solve the problems.</p>
+          <p><b>Important:</b> Your payment does NOT depend on how many problems you answer correctly.</p>
+          <p>Please press next to continue.</p>
+        </div>`
+      ],
+      show_clickable_nav:true
+    });
+  } else {
+    timeline.push({
+      type: jsPsychInstructions,
+      pages:[
+        `<div style="width:1000px; text-align:left;">
+          <p><b>You have been randomly assigned to the AI-assisted learning condition.</b> In this condition, you will have access to an AI assistant (ChatGPT) to help you solve problems. We encourage you to use the AI to help you work through the problems. You can use the AI however you like -- feel free to ask it for hints, answers, or solutions.</p>
+          <p>For some problems, ChatGPT won't be available. When ChatGPT isn't available, please don't use other AI tools, Calculator, or Google.</p>
+          <p><b>Important:</b> Your payment does NOT depend on how many problems you answer correctly.</p>
+          <p>Please press next to continue.</p>
+        </div>`
+      ],
+      show_clickable_nav:true
+    });
+  }
+
+  // Add main puzzles (with AI for AI condition, with hints panel for control condition)
+  mainPuzzles.forEach((p, index)=>{
+    const puzzleIndex = index; // 0-based index for progress bar
+    timeline.push({
+      type: jsPsychSurveyHtmlForm,
+      html: ()=>buildPuzzleHTML(p, puzzleIndex, totalMainPuzzles),
+      button_label:'Continue',
+      data:{ stimulus_type:'fractions_puzzle', puzzle_id:p.id, puzzle_type:p.type, puzzle_block: p.block, puzzle_index: index + 1 },
+      on_load: ()=>setupPuzzle(p, true), // showChat = true for initial puzzles (will show hints for control)
+      on_finish: d=>finalizePuzzleData(d,p)
+    });
+  });
+
+
+  /* ---------- FINAL PUZZLES WITHOUT AI ASSISTANT OR HINTS ---------- */
+  // Add final puzzles (without AI assistant or hints panel)
+  finalPuzzles.forEach((fp, index) => {
+    const puzzleIndex = mainPuzzles.length + index; // Continue from where initial puzzles ended
+    timeline.push({
+      type: jsPsychSurveyHtmlForm,
+      html: ()=>buildPuzzleHTML(fp, puzzleIndex, totalMainPuzzles),
+      button_label:'Continue',
+      data:{ stimulus_type:'fractions_puzzle', puzzle_id:fp.id, puzzle_type:fp.type, no_ai_assistant: true, final_puzzle_index: index + 1 },
+      on_load: ()=>setupPuzzle(fp, false), // showChat = false for final puzzles (no hints either)
+      on_finish: d=>finalizePuzzleData(d,fp)
+    });
+  });
+
+  /* ---------- POST-SURVEY (attention check only) ---------- */
+  timeline.push({
+    type: jsPsychSurveyLikert,
+    preamble: '<div style="width:1000px;"><p>Please answer the following question.</p></div>',
+    questions: [
+      { prompt: 'This is a quick attention check, please select the option paying attention (10)', name: 'Attention', labels: ['1 (not paying attention)', '','','','','','','','', '10 (paying attention)'], required: true }
+    ],
+    data: { stimulus_type: 'post_survey' }
+  });
+
+  // AI usage survey (only for AI condition) - multiple choice
+  var aiUsageSurvey = {
+    type: jsPsychSurveyMultiChoice,
+    questions: [
+      {
+        prompt: "How did you primarily use the AI assistant (ChatGPT) while solving the problems?",
+        name: 'AI_Usage_Type',
+        options: [
+          'To get the solution directly',
+          'To get hints about how to approach the problem',
+          'To clarify or understand the question better',
+          'To get examples of similar problems',
+          'I did not use the AI assistant',
+          'Other'
+        ],
+        required: true
+      }
+    ],
+    randomize_question_order: false,
+    data: { stimulus_type: 'ai_usage_survey' }
+  };
+
+  // Only add AI usage survey for AI condition
+  if (!participantNoAI) {
+    timeline.push(aiUsageSurvey);
+  }
+
+  /* ---------- BOT CHECK ---------- */
+  timeline.push({
+    type: jsPsychSurveyHtmlForm,
+    html: `<div style="text-align:center; padding:20px; max-width:600px; margin:0 auto;">
+      <h2 style="margin-bottom:8px;">Quick Check</h2>
+      <p style="font-size:17px; color:#444;">Please answer the question below before continuing.</p>
+      <img src="hand-AI-catch.png" alt="A hand" style="max-width:280px; margin:20px auto; display:block;">
+      <p style="font-size:20px; font-weight:bold; margin-bottom:16px;">How many fingers are on the hand?</p>
+      <input type="number" name="bot_check_answer" id="bot-check-input"
+             min="1" max="20" required
+             style="width:100px; height:44px; font-size:22px; text-align:center; border:2px solid #333; border-radius:4px;"
+             placeholder="?">
+    </div>`,
+    button_label: 'Submit',
+    data: { stimulus_type: 'bot_check' },
+    on_finish: function(data) {
+      var raw = data.response ? data.response.bot_check_answer : null;
+      data.bot_check_response = raw !== null && raw !== '' ? parseInt(raw) : null;
+      data.bot_check_correct = data.bot_check_response === 6;
+    }
+  });
+
+  jsPsych.run(timeline);
+</script>
+</html>
