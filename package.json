@@ -2,10 +2,13 @@
   "name": "climate-research-experiment",
   "version": "1.0.0",
   "description": "Climate perception research experiment with AI chat support",
-  "main": "app.js",
+  "main": "app_reading.js",
   "scripts": {
-    "start": "node app.js",
-    "dev": "nodemon app.js"
+    "start": "node app_reading.js",
+    "start:reading": "node app_reading.js",
+    "start:fractions": "node app_fractions.js",
+    "dev": "nodemon app_reading.js",
+    "dev:fractions": "nodemon app_fractions.js"
   },
   "dependencies": {
     "axios": "^1.5.0",

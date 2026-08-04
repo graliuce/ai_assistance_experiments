@@ -1,1 +1,1 @@
-web: node app.js
+web: node app_reading.js
