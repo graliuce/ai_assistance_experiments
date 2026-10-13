@@ -53,9 +53,9 @@ each pretest/initial/final puzzle they saw). Fields:
 
 | Field | Type | Description |
 |---|---|---|
-| `participant_id` | string | Anonymous ID for the participant's session (derived from the raw record's database ID; not linked to any external/identifying participant info) |
+| `participant_id` | string | Anonymous ID for the participant's session |
 | `condition` | `"AI"` \| `"control"` | Which arm the participant was randomly assigned to for that session |
 | `puzzle_type` | `"pretest"` \| `"initial"` \| `"final"` | Which block the puzzle belonged to. Only `initial`-block puzzles have the AI assistant / hints panel available; `pretest` and `final` are unassisted for everyone |
 | `solved` | boolean | Whether the participant solved the puzzle correctly |
-| `skipped` | boolean | Whether the participant gave up on the puzzle without solving it |
+| `skipped` | boolean | Whether the participant pressed the skip button without inputting an answer |
 | `chatlog` | array | Chat messages exchanged with the AI assistant on this puzzle|
