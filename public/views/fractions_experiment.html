@@ -523,7 +523,7 @@
       problem: "Calculate: \\(\\displaystyle\\left(\\frac{5}{6} - \\frac{1}{4}\\right) × \\left(\\frac{3}{5} + \\frac{1}{10}\\right)\\)",
       units: "(enter as fraction)",
       answer: 0.4083,
-      alternateAnswers: ["49/120", "7/12 × 7/10"],
+      alternateAnswers: ["49/120"],
       solutionHint: "First: \\(\\displaystyle\\frac{5}{6} - \\frac{1}{4} = \\frac{10}{12} - \\frac{3}{12} = \\frac{7}{12}\\). Second: \\(\\displaystyle\\frac{3}{5} + \\frac{1}{10} = \\frac{6}{10} + \\frac{1}{10} = \\frac{7}{10}\\). Then multiply: \\(\\displaystyle\\frac{7}{12} × \\frac{7}{10} = \\frac{49}{120}\\)",
       type: "initial",
       block: 3
@@ -869,37 +869,38 @@
   }
 
   function parseFraction(str) {
+    // Parse into an exact {num, den} pair of BigInts (den > 0), or null if not a valid fraction.
     // Remove whitespace
     str = str.trim();
 
     // Check for mixed number format like "2 1/2" or "2 3/4"
-    const mixedMatch = str.match(/^(-?\d+)\s+(\d+)\/(\d+)$/);
+    const mixedMatch = str.match(/^(-?)(\d+)\s+(\d+)\/(\d+)$/);
     if (mixedMatch) {
-      const whole = parseInt(mixedMatch[1]);
-      const num = parseInt(mixedMatch[2]);
-      const denom = parseInt(mixedMatch[3]);
-      if (denom === 0) return NaN;
-      const sign = whole < 0 ? -1 : 1;
-      return sign * (Math.abs(whole) + num / denom);
+      const sign = mixedMatch[1] === '-' ? -1n : 1n;
+      const whole = BigInt(mixedMatch[2]);
+      const num = BigInt(mixedMatch[3]);
+      const denom = BigInt(mixedMatch[4]);
+      if (denom === 0n) return null;
+      return { num: sign * (whole * denom + num), den: denom };
     }
 
     // Check for simple fraction format like "3/4"
     const fractionMatch = str.match(/^(-?\d+)\/(\d+)$/);
     if (fractionMatch) {
-      const num = parseInt(fractionMatch[1]);
-      const denom = parseInt(fractionMatch[2]);
-      if (denom === 0) return NaN;
-      return num / denom;
+      const num = BigInt(fractionMatch[1]);
+      const denom = BigInt(fractionMatch[2]);
+      if (denom === 0n) return null;
+      return { num: num, den: denom };
     }
 
     // Check for whole number (integer)
     const wholeMatch = str.match(/^(-?\d+)$/);
     if (wholeMatch) {
-      return parseInt(wholeMatch[1]);
+      return { num: BigInt(wholeMatch[1]), den: 1n };
     }
 
-    // Do not accept decimals - return NaN for non-fraction input
-    return NaN;
+    // Do not accept decimals - return null for non-fraction input
+    return null;
   }
 
   function isFractionFormat(str) {
@@ -929,10 +930,15 @@
 
     // Parse user answer
     const parsed = parseFraction(userAnswer);
-    if(isNaN(parsed)) return false;
+    if(parsed === null) return false;
 
-    // Compare with tolerance for floating point
-    return Math.abs(parsed - correctAnswer) < 0.01;
+    // The exact correct value is the first alternate answer written as a fraction;
+    // correctAnswer is a rounded decimal and must not be used for comparison.
+    const exact = (alternateAnswers || []).map(parseFraction).find(f => f !== null);
+    if(!exact) return false;
+
+    // Exact comparison by cross-multiplication: a/b === c/d  <=>  a*d === c*b
+    return parsed.num * exact.den === exact.num * parsed.den;
   }
 
   function formatCorrectAnswer(p) {
